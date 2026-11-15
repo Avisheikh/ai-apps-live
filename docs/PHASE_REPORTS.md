@@ -354,3 +354,69 @@ Collector result: {
 
 ### 4. Known Gaps
 - Phase 6 Metric processing, status derivation, and snapshot service to be implemented.
+
+
+## Phase 6 Report: Metric Processing, Status Derivation, and Snapshot Engine
+
+**Date:** 2026-11-15T14:16:30Z  
+**Phase Status:** COMPLETED
+
+### 1. What Changed
+- Implemented `src/lib/status/derive.ts` as the single pure source of truth for display status and freshness derivation across the entire application:
+  - Strict priority order evaluation: Administrative disablement -> Missing/unverified records -> Age threshold (STALE) -> Canonical mapping.
+  - Hard constraint: Green `VERIFIED` status is strictly reserved for human-verified official company disclosures (`OFFICIAL_USERS`). It is programmatically impossible for any other metric to receive it.
+- Implemented `src/lib/snapshot/service.ts`:
+  - Structured typed public snapshot partitioned into four independent metric families: App Store Popularity, Search Interest, Officially Reported Users, and Concurrent Users.
+  - Calculated rank changes (`+N`, `-N`, `0`, `NEW`, `—`) comparing against the previous snapshot with a different source timestamp.
+  - Partitioned tracked apps absent from the chart into an explicit `notInTop100` array ("Not in Top 100").
+  - Formatted user counts with qualifiers (`250M+`, `~1B`).
+  - Hard-wired `concurrentUsers` to `available: false`, fixed explanatory text, and zero numbers/sparklines.
+  - Bound complete provenance metadata to every displayed item (metric name, source name, URL, geography, period, timestamps, status, database row reference).
+- Implemented `src/lib/sse/hub.ts`:
+  - Real-time Server-Sent Events stream delivering initial snapshot on connect, missed event replay via `Last-Event-ID`, 15-second heartbeats, and 1-second `stream_events` tailing.
+- Authored `tests/unit/accuracy_suite.test.ts` verifying all 8 Accuracy Release Blockers:
+  - Test 1 & 2: DAU/MAU figures never appear in concurrent user section; concurrent text contains zero digits.
+  - Test 3: Google Trends scores never cross into user counts or carry user units; disclaimer is present.
+  - Test 4: App Store ranks never appear as user counts.
+  - Test 5: Missing data never becomes zero ("Not in Top 100", "—", "No verified disclosure").
+  - Test 6: Stale data is visibly identified with age and amber badge while retaining value display.
+  - Test 7: Property-based exhaustive test verifying that unverified observations never display as verified.
+  - Test 8: Full database-level provenance traceability.
+
+### 2. Commands Actually Run & Final Output Lines
+
+#### Command: `npm test`
+```
+> ai-apps-live@1.0.0 test
+> vitest run
+
+ ✓ tests/unit/database.test.ts (10 tests) 55ms
+ ✓ tests/unit/trends_importer.test.ts (9 tests) 72ms
+ ✓ tests/unit/disclosures.test.ts (6 tests) 63ms
+ ✓ tests/unit/scaffold.test.ts (1 test) 225ms
+ ✓ tests/unit/accuracy_suite.test.ts (7 tests) 57ms
+ ✓ tests/integration/apple_collector.test.ts (7 tests) 259ms
+
+ Test Files  6 passed (6)
+      Tests  40 passed (40)
+   Start at  14:15:23
+   Duration  753ms (tests 48%, import 25%, transform 24%, worker 4%)
+```
+(Exited with code 0)
+
+#### Command: `npm run typecheck && npm run lint`
+```
+> ai-apps-live@1.0.0 typecheck
+> tsc --noEmit
+
+> ai-apps-live@1.0.0 lint
+> eslint .
+```
+(Exited with code 0)
+
+### 3. Test Counts
+- Unit & Integration tests: 40 passed, 0 failed.
+- Accuracy Release Blocker tests: 7 tests passed (covering all 8 criteria).
+
+### 4. Known Gaps
+- Phase 7 Management dashboard (`/admin`) and secure APIs to be implemented.
