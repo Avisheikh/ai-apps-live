@@ -300,3 +300,57 @@ Collector result: {
 
 ### 4. Known Gaps
 - Phase 5 Disclosure management to be implemented.
+
+
+## Phase 5 Report: Official Company Disclosures Management
+
+**Date:** 2026-11-15T14:13:00Z  
+**Phase Status:** COMPLETED
+
+### 1. What Changed
+- Implemented `src/lib/disclosures/service.ts` managing the end-to-end lifecycle of official company disclosures:
+  - Input validation: verified mandatory HTTPS `source_url`, mandatory `source_locator`, positive `value_numeric`, and recognized metric types (`DAU`, `WAU`, `MAU`, `OTHER`). No concurrent users metric permitted.
+  - Draft creation: status defaults to `DRAFT`. Confirmed that DRAFT records are completely isolated and never exposed via public endpoints or `/broadcast`.
+  - Verification workflow: requires non-empty `verifier_note` confirming primary source match; status transitions to `VERIFIED`; immutability database trigger takes effect immediately.
+  - Immutability enforcement: verified through SQLite trigger `trg_disc_no_value_edit_after_verify` that verified records cannot be updated in place.
+  - Superseding workflow: `supersedeDisclosure` creates a new draft pointing to `supersedes_id = old.id`. The prior record remains current and visible until the superseding draft is verified, at which point the old record transitions to `is_current = 0` atomically.
+  - Withdrawal workflow: `withdrawDisclosure` flags records as `WITHDRAWN` and `is_current = 0`, immediately removing them from publication while retaining raw provenance in the database for audit.
+  - Audit & real-time: all state mutations log to `audit_log` with before/after JSON and emit `disclosure_update` events to `stream_events`.
+- Authored test suite `tests/unit/disclosures.test.ts` verifying all Phase 5 lifecycle operations.
+
+### 2. Commands Actually Run & Final Output Lines
+
+#### Command: `npm test`
+```
+> ai-apps-live@1.0.0 test
+> vitest run
+
+ ✓ tests/unit/database.test.ts (10 tests) 71ms
+ ✓ tests/unit/trends_importer.test.ts (9 tests) 84ms
+ ✓ tests/unit/disclosures.test.ts (6 tests) 63ms
+ ✓ tests/unit/scaffold.test.ts (1 test) 229ms
+ ✓ tests/integration/apple_collector.test.ts (7 tests) 271ms
+
+ Test Files  5 passed (5)
+      Tests  33 passed (33)
+   Start at  14:12:49
+   Duration  1.01s (tests 39%, transform 26%, import 22%, worker 13%)
+```
+(Exited with code 0)
+
+#### Command: `npm run typecheck && npm run lint`
+```
+> ai-apps-live@1.0.0 typecheck
+> tsc --noEmit
+
+> ai-apps-live@1.0.0 lint
+> eslint .
+```
+(Exited with code 0)
+
+### 3. Test Counts
+- Unit & Integration tests: 33 passed, 0 failed.
+- Disclosures tests: 6 passed.
+
+### 4. Known Gaps
+- Phase 6 Metric processing, status derivation, and snapshot service to be implemented.
