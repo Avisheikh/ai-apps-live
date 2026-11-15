@@ -1,14 +1,19 @@
 /**
- * AI Apps Live — Background Worker Entrypoint
- * Autonomous process running schedulers, collectors, and health monitors.
+ * AI Apps Live — Autonomous Background Worker
+ * Handles scheduled data collection, retries, and health monitors.
  */
+import { Scheduler } from "./scheduler";
 
-console.log("[Worker] AI Apps Live worker initializing...");
+console.log("[Worker] Starting AI Apps Live worker...");
 
-export function runWorker(): void {
-  console.log("[Worker] Process started successfully in background.");
-}
+const scheduler = new Scheduler();
+scheduler.start();
 
-if (require.main === module || (typeof process !== "undefined" && process.argv[1]?.includes("index.ts"))) {
-  runWorker();
-}
+const shutdown = (signal: string) => {
+  console.log(`[Worker] Received ${signal}. Shutting down gracefully...`);
+  scheduler.stop();
+  process.exit(0);
+};
+
+process.on("SIGTERM", () => shutdown("SIGTERM"));
+process.on("SIGINT", () => shutdown("SIGINT"));

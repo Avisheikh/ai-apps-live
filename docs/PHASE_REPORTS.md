@@ -150,3 +150,90 @@ Route (app)
 
 ### 4. Known Gaps
 - Apple RSS collector to be implemented in Phase 3.
+
+
+## Phase 3 Report: Apple RSS Collector, Schedulers, and Provenance
+
+**Date:** 2026-11-15T14:09:00Z  
+**Phase Status:** COMPLETED
+
+### 1. What Changed
+- Inspected live Apple endpoints and robots.txt files:
+  - `rss.marketingtools.apple.com/robots.txt` has no disallow rules.
+  - `itunes.apple.com/robots.txt` explicitly disallows `/*/lookup?`, `/search*`, and `/*/rss/*`.
+  - Documented findings in `docs/DATA_SOURCES.md`.
+  - Observed Apple CDN round-robin anomaly where node `17.33.193.45` intermittently returned HTTP 502/504 while sibling nodes returned HTTP 200. Implemented intelligent retry logic in `AppleRssCollector` that recovers seamlessly.
+- Implemented `src/collectors/types.ts` defining `Collector`, `CollectContext`, and `CollectResult`.
+- Implemented `src/collectors/apple-rss/index.ts`:
+  - Enforced SSRF hostname allowlist (`rss.marketingtools.apple.com`).
+  - Added strict Zod schema validation for Apple App Store JSON feeds.
+  - Validated country matching, 1–100 item limits, unique item IDs, and source timestamp plausibility (between now − 7 days and now + 5 minutes).
+  - Calculated SHA-256 and GZIP compressed buffer of raw payload.
+  - Implemented single atomic transaction inserting `source_observations`, `chart_snapshots`, `app_store_rankings`, and emitting `stream_events`.
+  - Only mapped `apple_app_id` to `app_id` when `apple_identity_status = 'CONFIRMED'`.
+- Implemented `src/worker/scheduler.ts`:
+  - Wrapped collector execution in 20 s timeout and error isolation.
+  - Recorded detailed run logs in `collector_runs`.
+  - Calculated `observed_update_interval_seconds` as median gap between the last 20 snapshots.
+  - Managed `source_health` state transitions (`HEALTHY` on success; `DEGRADED` at 2 failures; `DOWN` at 5 failures).
+  - Implemented exponential backoff arithmetic doubling from 60 s to 6 h with ±10% jitter.
+- Executed real live collection against `https://rss.marketingtools.apple.com/api/v2/us/apps/top-free/100/apps.json`, successfully storing 100 rankings in the database.
+- Created mock feed fixtures in `tests/fixtures/apple_feed_fixture.ts`.
+- Authored test suite `tests/integration/apple_collector.test.ts` verifying:
+  - 100-item feed parsing and storage.
+  - Unconfirmed ID filtering (`app_id = NULL`) vs confirmed mapping (`app_id` populated).
+  - Duplicate snapshot prevention (`NO_CHANGE`).
+  - Implausible source timestamp rejection (`SOURCE_TIMESTAMP_IMPLAUSIBLE`).
+  - Malformed JSON handling.
+  - Health state degradation to `DEGRADED` and `DOWN` while preserving prior historical data.
+  - Exponential backoff calculation and ceiling.
+
+### 2. Commands Actually Run & Final Output Lines
+
+#### Command: Live Collection via `Scheduler.runCollector('apple_rss')`
+```
+Collector result: {
+  "status": "SUCCESS",
+  "httpStatus": 200,
+  "serverDateHeader": "Sun, 15 Nov 2026 08:21:08 GMT",
+  "clockSkewMs": 835,
+  "recordsSeen": 100,
+  "recordsInserted": 100,
+  "sourceUpdatedAt": "2026-11-15T08:21:08.000Z",
+  "rawBodySha256": "2511a1e0509bf4bd572f91171ff4e39f804f9491666b598c550cff8de9fd3226"
+}
+```
+(Exited with code 0)
+
+#### Command: `npm test`
+```
+> ai-apps-live@1.0.0 test
+> vitest run
+
+ ✓ tests/unit/database.test.ts (10 tests) 94ms
+ ✓ tests/unit/scaffold.test.ts (1 test) 284ms
+ ✓ tests/integration/apple_collector.test.ts (7 tests) 298ms
+
+ Test Files  3 passed (3)
+      Tests  18 passed (18)
+   Start at  14:08:21
+   Duration  937ms (tests 54%, transform 25%, import 18%, worker 3%)
+```
+(Exited with code 0)
+
+#### Command: `npm run typecheck && npm run lint`
+```
+> ai-apps-live@1.0.0 typecheck
+> tsc --noEmit
+
+> ai-apps-live@1.0.0 lint
+> eslint .
+```
+(Exited with code 0)
+
+### 3. Test Counts
+- Unit & Integration tests: 18 passed, 0 failed.
+- Real live HTTP collector execution: 1 passed (100 rankings stored).
+
+### 4. Known Gaps
+- Phase 4 Trends CSV importer to be implemented.
