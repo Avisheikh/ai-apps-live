@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, useRef, useTransition } from "react";
-import { PublicSnapshot, AppStoreItem, OfficialUserItem } from "@/lib/snapshot/service";
+import { PublicSnapshot, AppStoreItem, OfficialUserItem, ChartItem } from "@/lib/snapshot/service";
 import { StatusBadge } from "./Badge";
 import { Monogram } from "./Monogram";
 import { SearchInterestChart } from "./SearchInterestChart";
@@ -13,6 +13,7 @@ interface BroadcastClientProps {
   tz?: string;
   preview?: boolean;
   demoMode?: boolean;
+  defaultView?: "tracked" | "top50";
 }
 
 type ConnectionState = "CONNECTED" | "RECONNECTING" | "INTERRUPTED";
@@ -23,8 +24,10 @@ export function BroadcastClient({
   tz = "UTC",
   preview = false,
   demoMode = false,
+  defaultView = "tracked",
 }: BroadcastClientProps) {
   const [snapshot, setSnapshot] = useState<PublicSnapshot>(initialSnapshot);
+  const [viewMode, setViewMode] = useState<"tracked" | "top50">(defaultView);
   const [connectionState, setConnectionState] = useState<ConnectionState>("CONNECTED");
   const [lastEventTime, setLastEventTime] = useState<number>(Date.now());
   const [scale, setScale] = useState<number>(1);
@@ -33,6 +36,14 @@ export function BroadcastClient({
   const retryTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const eventSourceRef = useRef<EventSource | null>(null);
   const backoffDelayRef = useRef<number>(1000);
+
+  // Sync view from query parameter if present
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const v = new URLSearchParams(window.location.search).get("view");
+      if (v === "top50") setViewMode("top50");
+    }
+  }, []);
 
   // 1. Window scaling in preview mode
   useEffect(() => {
@@ -290,9 +301,34 @@ export function BroadcastClient({
           <div>
             <div className="flex items-center justify-between pb-3 border-b border-hairline/60">
               <div>
-                <span className="text-xs font-mono font-bold tracking-widest text-broadcast-secondary uppercase">
-                  Metric 1 · Automatic Public Ingestion
-                </span>
+                <div className="flex items-center space-x-3 mb-0.5">
+                  <span className="text-xs font-mono font-bold tracking-widest text-broadcast-secondary uppercase">
+                    Metric 1 · Automatic Public Ingestion
+                  </span>
+                  {/* Mode switcher pills */}
+                  <div className="flex items-center space-x-1 bg-canvas/80 p-0.5 rounded border border-hairline/70">
+                    <button
+                      onClick={() => setViewMode("tracked")}
+                      className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold transition ${
+                        viewMode === "tracked"
+                          ? "bg-broadcast-blue text-white shadow-sm"
+                          : "text-broadcast-secondary hover:text-broadcast-text"
+                      }`}
+                    >
+                      Tracked AI ({snapshot.appStore.items.length})
+                    </button>
+                    <button
+                      onClick={() => setViewMode("top50")}
+                      className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold transition ${
+                        viewMode === "top50"
+                          ? "bg-broadcast-blue text-white shadow-sm"
+                          : "text-broadcast-secondary hover:text-broadcast-text"
+                      }`}
+                    >
+                      Top 50 Chart
+                    </button>
+                  </div>
+                </div>
                 <h2 className="text-xl font-bold tracking-wide text-broadcast-text">
                   App Store Popularity (Top Free · {snapshot.appStore.country.toUpperCase()})
                 </h2>
@@ -311,6 +347,12 @@ export function BroadcastClient({
                     Source state: {snapshot.appStore.freshness.state}
                   </span>
                 </div>
+              ) : viewMode === "top50" ? (
+                <div className="overflow-y-auto max-h-[720px] pr-1.5 flex flex-col space-y-1.5">
+                  {(snapshot.appStore.topChart || []).map((chartItem) => (
+                    <TopChartRow key={`${chartItem.rank}-${chartItem.appleAppId}`} item={chartItem} />
+                  ))}
+                </div>
               ) : snapshot.appStore.items.length === 0 ? (
                 <div className="h-96 flex flex-col items-center justify-center text-center p-8 text-broadcast-secondary font-mono text-sm">
                   <span>No tracked applications ranked in current Top 100 chart.</span>
@@ -323,7 +365,7 @@ export function BroadcastClient({
             </div>
 
             {/* Not in Top 100 section */}
-            {snapshot.appStore.notInTop100.length > 0 && (
+            {viewMode === "tracked" && snapshot.appStore.notInTop100.length > 0 && (
               <div className="mt-4 pt-3 border-t border-hairline/60">
                 <div className="text-[11px] font-mono text-broadcast-secondary mb-1.5 uppercase tracking-wide">
                   Not in Top 100
@@ -681,6 +723,47 @@ function OfficialUserRow({ item }: { item: OfficialUserItem }) {
           {item.valueFormatted}
         </div>
         <StatusBadge status={item.badge} />
+      </div>
+    </div>
+  );
+}
+
+function TopChartRow({ item }: { item: ChartItem }) {
+  return (
+    <div
+      className={`flex items-center justify-between p-2 rounded border transition ${
+        item.isTracked
+          ? "bg-broadcast-blue/15 border-broadcast-blue/60"
+          : "bg-panel/70 border-hairline/40 hover:border-hairline"
+      }`}
+    >
+      <div className="flex items-center space-x-3 truncate">
+        {/* Rank numeral */}
+        <div className="w-10 font-mono text-lg font-bold text-broadcast-text tabular-nums text-center">
+          #{item.rank}
+        </div>
+
+        {/* Monogram */}
+        <Monogram name={item.name} size={32} />
+
+        {/* Names */}
+        <div className="flex flex-col truncate max-w-[420px]">
+          <span className="font-bold text-sm text-broadcast-text truncate flex items-center gap-2">
+            {item.name}
+            {item.isTracked && (
+              <span className="px-1.5 py-0.5 rounded bg-broadcast-blue/30 border border-broadcast-blue/60 text-broadcast-blue text-[10px] font-mono font-bold uppercase">
+                Tracked AI App
+              </span>
+            )}
+          </span>
+          <span className="text-[11px] text-broadcast-secondary truncate">
+            {item.artist || "Unknown Developer"}
+          </span>
+        </div>
+      </div>
+
+      <div className="font-mono text-[11px] text-broadcast-secondary shrink-0 pl-2">
+        ID: {item.appleAppId}
       </div>
     </div>
   );

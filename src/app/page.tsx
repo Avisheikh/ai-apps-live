@@ -9,16 +9,22 @@ export default function Home() {
       <p className="text-broadcast-secondary text-lg max-w-md mb-8">
         Local-first, broadcast-ready dashboard tracking public AI metrics.
       </p>
-      <div className="flex gap-4">
+      <div className="flex flex-wrap gap-4 justify-center">
         <Link
           href="/broadcast"
           className="px-6 py-3 rounded bg-broadcast-blue text-white font-medium hover:bg-opacity-90 transition"
         >
-          Open Broadcast View
+          Open Broadcast View (1080p)
+        </Link>
+        <Link
+          href="/top50"
+          className="px-6 py-3 rounded border border-hairline bg-panel text-broadcast-text hover:border-broadcast-blue transition"
+        >
+          Top 50 Apps
         </Link>
         <Link
           href="/admin"
-          className="px-6 py-3 rounded border border-hairline bg-panel text-broadcast-text hover:border-broadcast-blue transition"
+          className="px-6 py-3 rounded border border-hairline bg-panel text-broadcast-secondary hover:text-broadcast-text hover:border-hairline transition"
         >
           Admin Console
         </Link>

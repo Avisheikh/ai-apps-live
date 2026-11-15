@@ -19,6 +19,15 @@ export interface ProvenanceInfo {
   };
 }
 
+export interface ChartItem {
+  rank: number;
+  appleAppId: string;
+  name: string;
+  artist: string | null;
+  isTracked: boolean;
+  trackedAppSlug?: string | null;
+}
+
 export interface AppStoreItem {
   appId: number | null;
   slug: string | null;
@@ -89,6 +98,7 @@ export interface PublicSnapshot {
     freshness: Freshness;
     attribution: string;
     items: AppStoreItem[];
+    topChart: ChartItem[];
     notInTop100: Array<{
       appId: number;
       slug: string;
@@ -251,6 +261,7 @@ export class SnapshotService {
     });
 
     const appStoreItems: AppStoreItem[] = [];
+    const topChart: ChartItem[] = [];
     const seenAppIdsInTop = new Set<number>();
 
     if (latestSnapshot) {
@@ -333,6 +344,18 @@ export class SnapshotService {
               id: r.id,
             },
           },
+        });
+      }
+
+      for (const r of rankings.slice(0, 50)) {
+        const tracked = (r.app_id ? activeApps.find((a) => a.id === r.app_id) : null) || trackedAppleIds.get(r.apple_app_id);
+        topChart.push({
+          rank: r.rank,
+          appleAppId: r.apple_app_id,
+          name: r.name_in_feed,
+          artist: r.artist_in_feed,
+          isTracked: !!tracked,
+          trackedAppSlug: tracked?.slug || null,
         });
       }
     }
@@ -646,6 +669,7 @@ export class SnapshotService {
         freshness: appStoreStatus.freshness,
         attribution: "Source: Apple App Store charts",
         items: appStoreItems,
+        topChart,
         notInTop100,
       },
       searchInterest: {
