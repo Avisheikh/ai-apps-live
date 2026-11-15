@@ -420,3 +420,77 @@ Collector result: {
 
 ### 4. Known Gaps
 - Phase 7 Management dashboard (`/admin`) and secure APIs to be implemented.
+
+
+## Phase 7 Report: Management Dashboard, Security, and Administrative Control
+
+**Date:** 2026-11-15T14:24:00Z  
+**Phase Status:** COMPLETED
+
+### 1. What Changed
+- Implemented `src/lib/auth/session.ts`:
+  - Single operator authentication with scrypt constant-time password comparison (`timingSafeEqual`).
+  - Session cookie (`ai_apps_session`, `HttpOnly`, `SameSite=Strict`, 12-hour TTL).
+  - Login rate limiter strictly enforcing maximum 5 attempts per 15 minutes per IP (returns HTTP 429).
+  - CSRF protection requiring matching `X-CSRF-Token` on all state-changing endpoints (`POST`, `PATCH`, `PUT`, `DELETE`).
+- Implemented public and health API routes:
+  - `GET /api/health`: reporting DB status, migration version, process health, clock skew warning (> 60 s), and `example.test` integrity verification.
+  - `GET /api/public/snapshot`: delivering typed snapshots with `Cache-Control: no-store`.
+  - `GET /api/public/stream`: Server-Sent Events stream with heartbeat and replay.
+  - `GET /api/public/history/rankings`: paginated historical rankings.
+- Implemented protected admin API routes:
+  - `POST /api/admin/auth/login`, `POST /api/admin/auth/logout`, `GET /api/admin/auth/session`.
+  - `GET /api/admin/apps`, `POST /api/admin/apps`, `PATCH /api/admin/apps/[id]` (including Apple ID confirmation toggles).
+  - `PATCH /api/admin/sources/[key]`: enable/disable with required reason; validated 60 s floor for polling intervals.
+  - `PUT /api/admin/metric-controls/[key]`: enable/disable with required reason; CONCURRENT_USERS lock verified. Emits `control_update` stream event.
+  - `POST /api/admin/imports/trends/preview` and `POST /api/admin/imports/trends/commit`.
+  - `GET /api/admin/disclosures`, `POST /api/admin/disclosures`, `/verify`, `/supersede`, `/withdraw`.
+  - `POST /api/admin/collectors/[key]/run`: manual collector trigger using the identical scheduler code path.
+  - `GET /api/admin/runs`, `GET /api/admin/observations`, `GET /api/admin/audit`.
+  - `GET /api/admin/checklist`: live computed go-live checklist (pass/fail items evaluated against live system state).
+- Implemented `/admin` UI in `src/app/admin/page.tsx`:
+  - Login screen with rate limit error handling.
+  - Tabs: Go-Live Checklist, Apps Registry, Sources & Health, Metric Controls, Trends Importer, Disclosures, Runs & Logs, Audit Timeline, and Live Broadcast Scaling Preview.
+  - Prominent "IMPORTER NOT YET VERIFIED AGAINST A REAL GOOGLE EXPORT" banner on the Trends tab.
+  - Hard-locked CONCURRENT_USERS row with policy explanation.
+  - Reason modal for disabling sources/controls and human verification modal with mandatory source confirmation checkbox and verifier note.
+- Authored test suite `tests/integration/admin_api.test.ts` verifying authentication enforcement, rate limiting, CSRF validation, audit logging, and real-time control broadcast events.
+
+### 2. Commands Actually Run & Final Output Lines
+
+#### Command: `npm test`
+```
+> ai-apps-live@1.0.0 test
+> vitest run
+
+ ✓ tests/unit/accuracy_suite.test.ts (7 tests) 63ms
+ ✓ tests/unit/database.test.ts (10 tests) 75ms
+ ✓ tests/integration/admin_api.test.ts (5 tests) 93ms
+ ✓ tests/unit/trends_importer.test.ts (9 tests) 88ms
+ ✓ tests/unit/disclosures.test.ts (6 tests) 63ms
+ ✓ tests/unit/scaffold.test.ts (1 test) 219ms
+ ✓ tests/integration/apple_collector.test.ts (7 tests) 261ms
+
+ Test Files  7 passed (7)
+      Tests  45 passed (45)
+   Start at  14:23:27
+   Duration  956ms (tests 43%, import 31%, transform 20%, worker 6%)
+```
+(Exited with code 0)
+
+#### Command: `npm run typecheck && npm run lint`
+```
+> ai-apps-live@1.0.0 typecheck
+> tsc --noEmit
+
+> ai-apps-live@1.0.0 lint
+> eslint .
+```
+(Exited with code 0)
+
+### 3. Test Counts
+- Unit & Integration tests: 45 passed, 0 failed.
+- Admin API & Security tests: 5 passed.
+
+### 4. Known Gaps
+- Phase 8 Broadcast dashboard (`/broadcast`) with deterministic hand-crafted SVG charts and OBS Browser Source optimization to be implemented.
