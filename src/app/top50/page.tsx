@@ -10,101 +10,122 @@ export default async function Top50Page() {
   const snapshot = snapshotService.getSnapshot("us");
   const top50 = snapshot.appStore.topChart || [];
 
+  // Group into 5 columns of 10 items each
+  const columns = [
+    { title: "Ranks 1–10", items: top50.slice(0, 10) },
+    { title: "Ranks 11–20", items: top50.slice(10, 20) },
+    { title: "Ranks 21–30", items: top50.slice(20, 30) },
+    { title: "Ranks 31–40", items: top50.slice(30, 40) },
+    { title: "Ranks 41–50", items: top50.slice(40, 50) },
+  ];
+
   return (
-    <div className="min-h-screen bg-canvas text-broadcast-text p-6 md:p-12 font-sans">
-      <div className="max-w-4xl mx-auto">
-        {/* Navigation & Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-6 border-b border-hairline gap-4">
-          <div>
-            <div className="text-xs font-mono font-bold tracking-widest text-broadcast-secondary uppercase">
-              Apple App Store Ingestion
-            </div>
-            <h1 className="text-3xl font-black text-broadcast-text tracking-wide mt-1">
-              Top 50 Free Apps (US Storefront)
-            </h1>
-            <p className="text-xs font-mono text-broadcast-secondary mt-1">
-              Source Updated: {snapshot.appStore.sourceUpdatedAt || "Recent"} · Ingested via Apple RSS Feed
-            </p>
+    <div className="w-screen h-screen overflow-hidden bg-canvas text-broadcast-text flex flex-col justify-between p-5 select-none font-sans">
+      {/* HEADER (Compact 56px) */}
+      <header className="h-14 pb-3 border-b border-hairline flex items-center justify-between shrink-0">
+        <div className="flex items-center space-x-4">
+          <div className="flex flex-col">
+            <span className="font-mono text-xl font-black tracking-wider text-broadcast-text">
+              APP STORE TOP 50 FREE
+            </span>
+            <span className="text-[10px] font-mono tracking-widest text-broadcast-secondary uppercase">
+              US Storefront · Ingested via Apple RSS Feed · Live Observability
+            </span>
+          </div>
+          <span className="px-2.5 py-0.5 rounded bg-broadcast-blue/20 border border-broadcast-blue/40 text-broadcast-blue font-mono text-xs font-bold">
+            SOURCE DATA
+          </span>
+        </div>
+
+        <div className="flex items-center space-x-6">
+          <div className="flex flex-col text-right font-mono text-xs">
+            <span className="text-[10px] text-broadcast-secondary uppercase">Source Updated</span>
+            <span className="text-broadcast-text font-bold">
+              {snapshot.appStore.sourceUpdatedAt || "Recent"}
+            </span>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center space-x-2">
             <Link
               href="/broadcast"
-              className="px-4 py-2 rounded bg-broadcast-blue text-white font-mono text-xs font-bold hover:bg-opacity-90 transition"
+              className="px-3 py-1.5 rounded bg-broadcast-blue text-white font-mono text-xs font-bold hover:bg-opacity-90 transition"
             >
               Broadcast View (1080p)
             </Link>
             <Link
               href="/admin"
-              className="px-4 py-2 rounded border border-hairline bg-panel text-broadcast-secondary hover:text-broadcast-text font-mono text-xs transition"
+              className="px-3 py-1.5 rounded border border-hairline bg-panel text-broadcast-secondary hover:text-broadcast-text font-mono text-xs transition"
             >
               Admin Console
             </Link>
           </div>
         </div>
+      </header>
 
-        {/* Notice line */}
-        <div className="my-6 p-4 rounded bg-panel/70 border border-hairline flex items-center justify-between">
-          <span className="text-xs font-mono text-broadcast-secondary">
-            Highlighting tracked AI apps monitored by AI Apps Live.
-          </span>
-          <span className="text-xs font-mono text-broadcast-secondary/70">
-            Source: Apple App Store charts
-          </span>
-        </div>
-
-        {/* Top 50 List */}
-        <div className="flex flex-col space-y-2">
-          {top50.length === 0 ? (
-            <div className="p-12 text-center font-mono text-broadcast-secondary border border-hairline rounded bg-panel">
-              No top 50 rankings collected yet. Ensure the ingestion worker is active.
+      {/* 5-COLUMN SINGLE-SCREEN GRID */}
+      <main className="flex-1 my-3 grid grid-cols-5 gap-3.5 overflow-hidden">
+        {columns.map((col, cIdx) => (
+          <div
+            key={col.title}
+            className="bg-panel/50 border border-hairline rounded-lg p-3 flex flex-col justify-between h-full overflow-hidden"
+          >
+            {/* Column Header */}
+            <div className="pb-2 border-b border-hairline/60 flex items-center justify-between text-xs font-mono font-bold text-broadcast-secondary uppercase">
+              <span>{col.title}</span>
+              <span className="text-[10px] text-hairline">Col {cIdx + 1}</span>
             </div>
-          ) : (
-            top50.map((app) => (
-              <div
-                key={`${app.rank}-${app.appleAppId}`}
-                className={`flex items-center justify-between p-3.5 rounded border transition ${
-                  app.isTracked
-                    ? "bg-broadcast-blue/15 border-broadcast-blue/60 shadow-[0_0_12px_rgba(45,123,255,0.15)]"
-                    : "bg-panel/70 border-hairline/60 hover:border-hairline"
-                }`}
-              >
-                <div className="flex items-center space-x-4 truncate">
-                  <div className="w-10 font-mono text-xl font-black text-broadcast-text tabular-nums text-center">
-                    #{app.rank}
-                  </div>
 
-                  <Monogram name={app.name} size={40} />
-
-                  <div className="flex flex-col truncate max-w-[480px]">
-                    <div className="font-bold text-base text-broadcast-text truncate flex items-center gap-2">
-                      <span>{app.name}</span>
-                      {app.isTracked && (
-                        <span className="px-2 py-0.5 rounded bg-broadcast-blue/30 border border-broadcast-blue/70 text-broadcast-blue text-[10px] font-mono font-bold uppercase tracking-wider">
-                          Tracked AI App
-                        </span>
-                      )}
-                    </div>
-                    <span className="text-xs text-broadcast-secondary truncate mt-0.5">
-                      {app.artist || "Unknown Developer"}
+            {/* 10 Items distributed evenly in full height */}
+            <div className="flex-1 flex flex-col justify-between py-2 space-y-1 overflow-hidden">
+              {col.items.map((app) => (
+                <div
+                  key={`${app.rank}-${app.appleAppId}`}
+                  className={`flex items-center justify-between px-2.5 py-1.5 rounded border text-xs leading-tight transition ${
+                    app.isTracked
+                      ? "bg-broadcast-blue/20 border-broadcast-blue/70 shadow-[0_0_8px_rgba(45,123,255,0.2)]"
+                      : "bg-panel/80 border-hairline/40 hover:border-hairline"
+                  }`}
+                >
+                  <div className="flex items-center space-x-2.5 truncate">
+                    <span className="w-6 font-mono font-black text-sm text-broadcast-text text-right shrink-0 tabular-nums">
+                      #{app.rank}
                     </span>
+                    <Monogram name={app.name} size={24} />
+                    <div className="flex flex-col truncate max-w-[170px]">
+                      <span className="font-bold text-xs text-broadcast-text truncate">
+                        {app.name}
+                      </span>
+                      <span className="text-[10px] text-broadcast-secondary truncate">
+                        {app.artist || "Unknown Developer"}
+                      </span>
+                    </div>
                   </div>
-                </div>
 
-                <div className="flex items-center space-x-4 shrink-0 font-mono text-xs">
-                  <span className="text-broadcast-secondary/80">ID: {app.appleAppId}</span>
+                  {app.isTracked && (
+                    <span className="px-1.5 py-0.5 rounded bg-broadcast-blue/40 border border-broadcast-blue/70 text-broadcast-cyan font-mono text-[9px] font-black uppercase tracking-wider shrink-0">
+                      AI APP
+                    </span>
+                  )}
                 </div>
-              </div>
-            ))
-          )}
-        </div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </main>
 
-        {/* Footer */}
-        <div className="mt-8 pt-4 border-t border-hairline flex items-center justify-between text-xs font-mono text-broadcast-secondary">
-          <span>Source: Apple App Store charts (https://rss.marketingtools.apple.com)</span>
-          <span>Independent project. Not affiliated with any listed company.</span>
+      {/* FOOTER (Compact 36px) */}
+      <footer className="h-9 px-4 border-t border-hairline flex items-center justify-between shrink-0 text-xs font-mono text-broadcast-secondary">
+        <div>
+          Source: Apple App Store charts (<a href="https://rss.marketingtools.apple.com" target="_blank" rel="noreferrer" className="underline hover:text-broadcast-text">rss.marketingtools.apple.com</a>)
         </div>
-      </div>
+        <div className="flex items-center space-x-2">
+          <span className="w-2 h-2 rounded-full bg-broadcast-blue inline-block" />
+          <span>Highlighted rows represent Tracked AI Apps monitored by AI Apps Live</span>
+        </div>
+        <div>
+          Independent project. Not affiliated with any listed company.
+        </div>
+      </footer>
     </div>
   );
 }

@@ -348,10 +348,17 @@ export function BroadcastClient({
                   </span>
                 </div>
               ) : viewMode === "top50" ? (
-                <div className="overflow-y-auto max-h-[720px] pr-1.5 flex flex-col space-y-1.5">
-                  {(snapshot.appStore.topChart || []).map((chartItem) => (
-                    <TopChartRow key={`${chartItem.rank}-${chartItem.appleAppId}`} item={chartItem} />
-                  ))}
+                <div className="grid grid-cols-2 gap-3 h-[745px] overflow-hidden select-none">
+                  <div className="flex flex-col justify-between h-full space-y-1">
+                    {(snapshot.appStore.topChart || []).slice(0, 25).map((chartItem) => (
+                      <TopChartCompactRow key={`${chartItem.rank}-${chartItem.appleAppId}`} item={chartItem} />
+                    ))}
+                  </div>
+                  <div className="flex flex-col justify-between h-full space-y-1">
+                    {(snapshot.appStore.topChart || []).slice(25, 50).map((chartItem) => (
+                      <TopChartCompactRow key={`${chartItem.rank}-${chartItem.appleAppId}`} item={chartItem} />
+                    ))}
+                  </div>
                 </div>
               ) : snapshot.appStore.items.length === 0 ? (
                 <div className="h-96 flex flex-col items-center justify-center text-center p-8 text-broadcast-secondary font-mono text-sm">
@@ -728,43 +735,29 @@ function OfficialUserRow({ item }: { item: OfficialUserItem }) {
   );
 }
 
-function TopChartRow({ item }: { item: ChartItem }) {
+function TopChartCompactRow({ item }: { item: ChartItem }) {
   return (
     <div
-      className={`flex items-center justify-between p-2 rounded border transition ${
+      className={`flex items-center justify-between px-2.5 py-1 rounded border text-xs leading-none transition ${
         item.isTracked
-          ? "bg-broadcast-blue/15 border-broadcast-blue/60"
-          : "bg-panel/70 border-hairline/40 hover:border-hairline"
+          ? "bg-broadcast-blue/20 border-broadcast-blue/70 text-broadcast-text shadow-sm"
+          : "bg-panel/60 border-hairline/40 text-broadcast-secondary hover:text-broadcast-text"
       }`}
     >
-      <div className="flex items-center space-x-3 truncate">
-        {/* Rank numeral */}
-        <div className="w-10 font-mono text-lg font-bold text-broadcast-text tabular-nums text-center">
+      <div className="flex items-center space-x-2 truncate">
+        <span className="font-mono font-bold text-broadcast-text w-6 text-right shrink-0">
           #{item.rank}
-        </div>
-
-        {/* Monogram */}
-        <Monogram name={item.name} size={32} />
-
-        {/* Names */}
-        <div className="flex flex-col truncate max-w-[420px]">
-          <span className="font-bold text-sm text-broadcast-text truncate flex items-center gap-2">
-            {item.name}
-            {item.isTracked && (
-              <span className="px-1.5 py-0.5 rounded bg-broadcast-blue/30 border border-broadcast-blue/60 text-broadcast-blue text-[10px] font-mono font-bold uppercase">
-                Tracked AI App
-              </span>
-            )}
-          </span>
-          <span className="text-[11px] text-broadcast-secondary truncate">
-            {item.artist || "Unknown Developer"}
-          </span>
-        </div>
+        </span>
+        <Monogram name={item.name} size={20} />
+        <span className="font-semibold truncate max-w-[190px] text-broadcast-text">
+          {item.name}
+        </span>
       </div>
-
-      <div className="font-mono text-[11px] text-broadcast-secondary shrink-0 pl-2">
-        ID: {item.appleAppId}
-      </div>
+      {item.isTracked && (
+        <span className="px-1.5 py-0.5 rounded bg-broadcast-blue/40 text-broadcast-cyan font-mono text-[9px] font-bold uppercase shrink-0">
+          AI APP
+        </span>
+      )}
     </div>
   );
 }
