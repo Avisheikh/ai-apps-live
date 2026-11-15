@@ -1,0 +1,26 @@
+[Unit]
+Description=AI Apps Live - Broadcast & Management Web Server
+Documentation=file://%h/ai-apps-live/docs/OPERATIONS.md
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/ai-apps-live
+EnvironmentFile=%h/ai-apps-live/.env
+ExecStartPre=/usr/bin/npm run db:migrate
+ExecStart=/usr/bin/npm run start
+Restart=always
+RestartSec=5
+KillMode=mixed
+TimeoutStopSec=10
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=ai-apps-live-web
+
+# Hardening
+NoNewPrivileges=true
+ProtectSystem=full
+ReadWritePaths=%h/ai-apps-live/data
+
+[Install]
+WantedBy=default.target

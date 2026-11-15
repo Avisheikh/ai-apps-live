@@ -580,5 +580,93 @@ Running 5 tests using 1 worker
 - Total tests: 50 passed, 0 failed.
 
 ### 4. Known Gaps
-- Phase 9 (OBS Integration, systemd service units, automated backup runner, operations documentation) up next.
+- None for Phase 8.
+
+
+## Phase 9 Report: OBS Integration, Operations, Backups, and Documentation
+
+**Date:** 2026-11-15T14:36:00Z  
+**Phase Status:** COMPLETED
+
+### 1. What Changed
+- Created `deploy/systemd/ai-apps-live-web.service` and `deploy/systemd/ai-apps-live-worker.service`:
+  - User-level systemd service units with `Restart=always`, `RestartSec=5`, environment file ingestion, Sandboxing (`ProtectSystem=full`, `ReadWritePaths`), and pre-execution migration check.
+- Created `src/lib/db/backup.ts`:
+  - Atomic database backup using native SQLite `VACUUM INTO`.
+  - Retention manager retaining the last 14 backups and pruning older files.
+  - Verification restore utility that checks integrity via `PRAGMA integrity_check`, unlinks stale WAL/SHM sidecars, restores the file, and runs production integrity checks.
+- Created CLI scripts:
+  - `scripts/backup.ts` (`npm run db:backup`)
+  - `scripts/restore.ts` (`npm run db:restore <path>`)
+- Created unit test suite `tests/unit/backup_restore.test.ts`:
+  - Verifying `VACUUM INTO` backup creation on a populated database.
+  - Verifying 14-backup retention limit and pruning.
+  - Verifying clean database restoration and preserved trigger enforcement (e.g. `CONCURRENT_USERS` hardware lock).
+- Authored comprehensive documentation:
+  - `docs/OPERATIONS.md`: systemd setup, `loginctl enable-linger`, cron jobs, disaster recovery restore procedure, OBS Studio 1920×1080 Browser Source settings (30 FPS, shutdown when not visible off, refresh when active on), YouTube Live CBR encoder settings, mid-stream triage runbook, and go-live verification checklist.
+  - `docs/ACCURACY_POLICY.md`: full rationale for the 8 Accuracy Rules, truth-in-data philosophy, hard metric isolation, concurrent users permanent lock, missing data vs. zero, and database trigger enforcement table.
+  - `docs/ARCHITECTURE.md`: complete system architecture, dual-process model (`web` and `worker`), Mermaid component and sequence diagrams, SQLite WAL concurrency, SSE event bus fan-out, and security boundaries.
+
+### 2. Commands Actually Run & Final Output Lines
+
+#### Command: `npm run typecheck && npm run lint`
+```
+> ai-apps-live@1.0.0 typecheck
+> tsc --noEmit
+
+> ai-apps-live@1.0.0 lint
+> eslint .
+```
+(Exited with code 0)
+
+#### Command: `npm test`
+```
+> ai-apps-live@1.0.0 test
+> vitest run
+
+Test Files  8 passed (8)
+     Tests  48 passed (48)
+  Start at  14:36:46
+  Duration  1.05s (tests 52%, import 27%, transform 15%, worker 7%)
+```
+(Exited with code 0)
+
+#### Command: `npm run db:backup`
+```
+> ai-apps-live@1.0.0 db:backup
+> tsx scripts/backup.ts
+
+[Backup] Starting database backup via VACUUM INTO...
+[Backup] Successfully created: /home/avisheikh/ai-apps-live/data/backups/ai-apps-live-backup-2026-11-15T08-51-52-930Z.db
+```
+(Exited with code 0)
+
+#### Command: `npm run db:restore /home/avisheikh/ai-apps-live/data/backups/ai-apps-live-backup-2026-11-15T08-51-52-930Z.db`
+```
+> ai-apps-live@1.0.0 db:restore
+> tsx scripts/restore.ts /home/avisheikh/ai-apps-live/data/backups/ai-apps-live-backup-2026-11-15T08-51-52-930Z.db
+
+[Restore] Restoring database from: /home/avisheikh/ai-apps-live/data/backups/ai-apps-live-backup-2026-11-15T08-51-52-930Z.db...
+[Restore] Successfully restored and verified target database.
+```
+(Exited with code 0)
+
+#### Command: `npm run test:e2e`
+```
+> ai-apps-live@1.0.0 test:e2e
+> playwright test
+
+Running 5 tests using 1 worker
+  5 passed (4.9s)
+```
+(Exited with code 0)
+
+### 3. Test Counts
+- Unit & Integration tests: 48 passed (8 test files)
+- E2E Playwright tests: 5 passed (1 test file)
+- Total tests: 53 passed, 0 failed.
+
+### 4. Known Gaps
+- Phase 10 (Reliability, Chaos & Accuracy Verification, poison-list scanning, npm audit, and final project report) up next.
+
 
