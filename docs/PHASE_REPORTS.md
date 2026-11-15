@@ -493,4 +493,92 @@ Collector result: {
 - Admin API & Security tests: 5 passed.
 
 ### 4. Known Gaps
-- Phase 8 Broadcast dashboard (`/broadcast`) with deterministic hand-crafted SVG charts and OBS Browser Source optimization to be implemented.
+- None for Phase 7.
+
+
+## Phase 8 Report: Broadcast Dashboard (/broadcast)
+
+**Date:** 2026-11-15T14:32:00Z  
+**Phase Status:** COMPLETED
+
+### 1. What Changed
+- Created `src/components/broadcast/Badge.tsx`:
+  - Typed status badge component rendering `VERIFIED` (green, reserved for official disclosures), `SOURCE DATA` (electric blue), `MANUAL IMPORT` (restrained purple), `STALE` (amber), and `UNAVAILABLE` (gray).
+- Created `src/components/broadcast/Monogram.tsx`:
+  - Deterministic 2-letter monogram fallback with deterministic hue derived from app name/slug.
+- Created `src/components/broadcast/SearchInterestChart.tsx`:
+  - Pure SVG multi-line chart for Google Trends comparison sets (up to 5 series).
+  - Implements dashed stroke styling for partial last time buckets, tabular numerals, latest value legend, and clean axis gridlines.
+- Created `src/components/broadcast/RankSparklines.tsx`:
+  - Pure SVG sparklines component for 24-hour rank history trajectory.
+  - Inverted Y-axis (rank 1 at top, rank 100 at bottom).
+  - Explicit gap rendering for missing/unranked observation intervals.
+- Created `src/components/broadcast/BroadcastClient.tsx`:
+  - Production-grade OBS Browser Source dashboard running on a fixed 1920×1080 canvas.
+  - Three-column grid layout (760px / 560px / 520px) with 24px padding and 16px gaps.
+  - Real-time SSE connection to `/api/public/stream` with reconnect backoff (1s → 15s cap).
+  - Reliability guards: 120s heartbeat loss triggers automatic page reload; daily scheduled reload at 04:00 local time bounds browser memory consumption.
+  - Banners for `RECONNECTING` (with last data timestamp) and `DATA FEED INTERRUPTED`.
+  - Diagonal watermark `"DEMO DATA — NOT REAL"` in demo mode.
+  - Strict enforcement of honest empty states, "Not in Top 100" list (never 101, never 0), and permanently locked concurrent user panel ("Concurrent user data unavailable.", "No public source reports this.", zero numbers).
+  - Full attribution texts and three distinct timestamps (**Last collection**, **Source updated**, **Dashboard refresh**).
+  - Responsive window scaling via `?preview=1` for operator inspection.
+- Created `src/app/broadcast/page.tsx`:
+  - Next.js dynamic server component providing server-rendered initial snapshot from SQLite for immediate initial paint.
+- Authored Playwright E2E suite in `tests/e2e/broadcast.spec.ts`:
+  - Exact 1920×1080 canvas geometry assertions.
+  - Verification of zero scrollbars (horizontal and vertical).
+  - Verification of all five metric panels and column structures.
+  - Strict verification of required attribution texts, disclaimers, and exact concurrent user copy.
+  - Verification of responsive window scaling under `?preview=1`.
+  - Visual screenshot capture at 1920×1080 (`tests/fixtures/broadcast-screenshot-1080p.png`).
+
+### 2. Commands Actually Run & Final Output Lines
+
+#### Command: `npm run typecheck && npm run lint`
+```
+> ai-apps-live@1.0.0 typecheck
+> tsc --noEmit
+
+> ai-apps-live@1.0.0 lint
+> eslint .
+```
+(Exited with code 0)
+
+#### Command: `npm test`
+```
+> ai-apps-live@1.0.0 test
+> vitest run
+
+Test Files  7 passed (7)
+     Tests  45 passed (45)
+  Start at  14:30:49
+  Duration  675ms (tests 51%, import 29%, transform 14%, worker 7%)
+```
+(Exited with code 0)
+
+#### Command: `npm run test:e2e`
+```
+> ai-apps-live@1.0.0 test:e2e
+> playwright test
+
+Running 5 tests using 1 worker
+
+  ✓  1 …e Criteria › renders 1920x1080 fixed canvas with zero scrollbars (723ms)
+  ✓  2 …riteria › contains all required metric panels and layout columns (588ms)
+  ✓  3 …esents exact required attributions, disclaimers, and honest text (395ms)
+  ✓  4 …supports ?preview=1 responsive window scaling without distortion (474ms)
+  ✓  5 …ance Criteria › captures visual broadcast screenshot in 1920x1080 (1.1s)
+
+  5 passed (5.3s)
+```
+(Exited with code 0)
+
+### 3. Test Counts
+- Unit & Integration tests: 45 passed (7 test files)
+- E2E Playwright tests: 5 passed (1 test file)
+- Total tests: 50 passed, 0 failed.
+
+### 4. Known Gaps
+- Phase 9 (OBS Integration, systemd service units, automated backup runner, operations documentation) up next.
+
