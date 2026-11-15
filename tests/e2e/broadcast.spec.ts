@@ -153,4 +153,42 @@ test.describe("Broadcast Dashboard (/broadcast) Acceptance Criteria", () => {
     // Save screenshot
     await page.screenshot({ path: "tests/fixtures/broadcast-screenshot-1080p.png" });
   });
+
+  test("renders full-screen Top 50 chart without Metric 2 or 3 and with app downloads", async ({ page }) => {
+    await page.goto("/broadcast?view=top50");
+    await page.waitForSelector("#broadcast-canvas");
+
+    // 1. Metric 2 and Metric 3 and Concurrent Users must NOT be visible
+    await expect(page.locator("#panel-search-interest")).toHaveCount(0);
+    await expect(page.locator("#panel-official-users")).toHaveCount(0);
+    await expect(page.locator("#panel-concurrent-users")).toHaveCount(0);
+
+    // 2. Full-screen Top 50 panel must be visible
+    const top50Panel = page.locator("#panel-top50-fullscreen");
+    await expect(top50Panel).toBeVisible();
+    await expect(top50Panel.getByText("App Store Top 50 Free")).toBeVisible();
+
+    // 3. All 50 download buttons/links must be present
+    const downloadButtons = top50Panel.locator('a[href*="apps.apple.com"]');
+    await expect(downloadButtons).toHaveCount(50);
+
+    // 4. Zero scrollbars
+    const dimensions = await page.evaluate(() => {
+      return {
+        hasHorizontalScroll: document.documentElement.scrollWidth > window.innerWidth,
+        hasVerticalScroll: document.documentElement.scrollHeight > window.innerHeight,
+      };
+    });
+    expect(dimensions.hasHorizontalScroll).toBe(false);
+    expect(dimensions.hasVerticalScroll).toBe(false);
+
+    // 5. Test dynamic switching back and forth via header buttons
+    await page.click("#view-toggle-standard");
+    await expect(page.locator("#panel-search-interest")).toBeVisible();
+    await expect(page.locator("#panel-official-users")).toBeVisible();
+
+    await page.click("#view-toggle-top50");
+    await expect(page.locator("#panel-search-interest")).toHaveCount(0);
+    await expect(page.locator("#panel-top50-fullscreen")).toBeVisible();
+  });
 });

@@ -40,8 +40,11 @@ export function BroadcastClient({
   // Sync view from query parameter if present
   useEffect(() => {
     if (typeof window !== "undefined") {
-      const v = new URLSearchParams(window.location.search).get("view");
-      if (v === "top50") setViewMode("top50");
+      const params = new URLSearchParams(window.location.search);
+      const v = params.get("view");
+      const l = params.get("layout");
+      if (v === "top50" || l === "fullscreen" || l === "top50") setViewMode("top50");
+      else if (v === "tracked" || l === "standard") setViewMode("tracked");
     }
   }, []);
 
@@ -252,6 +255,33 @@ export function BroadcastClient({
           </div>
         </div>
 
+        {/* View Mode Toggle */}
+        <div className="flex items-center space-x-1.5 bg-canvas/80 p-1 rounded-lg border border-hairline/80">
+          <button
+            id="view-toggle-standard"
+            onClick={() => setViewMode("tracked")}
+            className={`px-3.5 py-1.5 rounded text-xs font-mono font-bold transition flex items-center space-x-1.5 ${
+              viewMode === "tracked"
+                ? "bg-broadcast-blue text-white shadow-sm"
+                : "text-broadcast-secondary hover:text-broadcast-text"
+            }`}
+          >
+            <span>Standard (3-Column View)</span>
+          </button>
+          <button
+            id="view-toggle-top50"
+            onClick={() => setViewMode("top50")}
+            className={`px-3.5 py-1.5 rounded text-xs font-mono font-bold transition flex items-center space-x-1.5 ${
+              viewMode === "top50"
+                ? "bg-broadcast-blue text-white shadow-sm"
+                : "text-broadcast-secondary hover:text-broadcast-text"
+            }`}
+          >
+            <span>Full-Screen Top 50 + Downloads</span>
+            <span className="px-1.5 py-0.2 rounded bg-white/20 text-[10px] font-mono">1-Screen</span>
+          </button>
+        </div>
+
         {/* Connection status and banners */}
         <div className="flex items-center space-x-4">
           {connectionState === "RECONNECTING" && (
@@ -291,113 +321,175 @@ export function BroadcastClient({
         </div>
       </header>
 
-      {/* MAIN (920px) — 24px padding, 16px gap, 3 columns: 760px / 560px / 520px */}
-      <main className="h-[920px] p-6 flex gap-4 shrink-0 overflow-hidden">
-        {/* COLUMN 1: APP STORE POPULARITY (760px) */}
-        <section
-          id="panel-app-store"
-          className="w-[760px] h-full bg-panel border border-hairline rounded-lg p-5 flex flex-col justify-between shrink-0 overflow-hidden"
-        >
-          <div>
-            <div className="flex items-center justify-between pb-3 border-b border-hairline/60">
-              <div>
-                <div className="flex items-center space-x-3 mb-0.5">
-                  <span className="text-xs font-mono font-bold tracking-widest text-broadcast-secondary uppercase">
-                    Metric 1 · Automatic Public Ingestion
-                  </span>
-                  {/* Mode switcher pills */}
-                  <div className="flex items-center space-x-1 bg-canvas/80 p-0.5 rounded border border-hairline/70">
-                    <button
-                      onClick={() => setViewMode("tracked")}
-                      className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold transition ${
-                        viewMode === "tracked"
-                          ? "bg-broadcast-blue text-white shadow-sm"
-                          : "text-broadcast-secondary hover:text-broadcast-text"
-                      }`}
-                    >
-                      Tracked AI ({snapshot.appStore.items.length})
-                    </button>
-                    <button
-                      onClick={() => setViewMode("top50")}
-                      className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold transition ${
-                        viewMode === "top50"
-                          ? "bg-broadcast-blue text-white shadow-sm"
-                          : "text-broadcast-secondary hover:text-broadcast-text"
-                      }`}
-                    >
-                      Top 50 Chart
-                    </button>
+      {/* MAIN (920px) */}
+      {viewMode === "top50" ? (
+        /* FULL-SCREEN TOP 50 SINGLE-SCREEN VIEW (Zero scrollbars, full 1920x920 canvas, Metric 2 & 3 hidden) */
+        <main className="h-[920px] p-6 shrink-0 overflow-hidden">
+          <section
+            id="panel-top50-fullscreen"
+            className="w-full h-full bg-panel border border-hairline rounded-lg p-5 flex flex-col justify-between overflow-hidden"
+          >
+            <div>
+              <div className="flex items-center justify-between pb-3 border-b border-hairline/60">
+                <div>
+                  <div className="flex items-center space-x-3 mb-1">
+                    <span className="text-xs font-mono font-bold tracking-widest text-broadcast-secondary uppercase">
+                      Metric 1 · App Store Popularity · Live Public Ingestion
+                    </span>
+                    <span className="px-2 py-0.5 rounded bg-broadcast-blue/20 border border-broadcast-blue/40 text-broadcast-cyan text-[11px] font-mono font-bold">
+                      Top 50 Free Chart ({snapshot.appStore.country.toUpperCase()})
+                    </span>
+                    <span className="px-2 py-0.5 rounded bg-canvas/80 border border-hairline text-broadcast-secondary text-[11px] font-mono">
+                      Single-Screen Broadcast Mode (Zero Scroll)
+                    </span>
                   </div>
+                  <h2 className="text-2xl font-black tracking-wide text-broadcast-text">
+                    App Store Top 50 Free · Live Ranking & Downloads
+                  </h2>
                 </div>
-                <h2 className="text-xl font-bold tracking-wide text-broadcast-text">
-                  App Store Popularity (Top Free · {snapshot.appStore.country.toUpperCase()})
-                </h2>
+
+                <div className="flex items-center space-x-4">
+                  <div className="flex items-center space-x-2 text-xs font-mono text-broadcast-secondary">
+                    <span className="w-2.5 h-2.5 rounded-full bg-broadcast-blue inline-block shadow-[0_0_8px_#2D7BFF]" />
+                    <span>Tracked AI Apps Monitored</span>
+                  </div>
+                  <StatusBadge status={snapshot.appStore.status} />
+                </div>
               </div>
-              <div className="flex items-center space-x-2">
-                <StatusBadge status={snapshot.appStore.status} />
+
+              {/* 5-Column Grid */}
+              <div className="mt-3 grid grid-cols-5 gap-3.5 h-[745px] overflow-hidden select-none">
+                {[
+                  { title: "Ranks 1–10", items: (snapshot.appStore.topChart || []).slice(0, 10) },
+                  { title: "Ranks 11–20", items: (snapshot.appStore.topChart || []).slice(10, 20) },
+                  { title: "Ranks 21–30", items: (snapshot.appStore.topChart || []).slice(20, 30) },
+                  { title: "Ranks 31–40", items: (snapshot.appStore.topChart || []).slice(30, 40) },
+                  { title: "Ranks 41–50", items: (snapshot.appStore.topChart || []).slice(40, 50) },
+                ].map((col, idx) => (
+                  <div
+                    key={col.title}
+                    className="bg-canvas/40 border border-hairline/60 rounded-lg p-2.5 flex flex-col justify-between h-full overflow-hidden"
+                  >
+                    <div className="pb-1.5 mb-1 border-b border-hairline/50 flex items-center justify-between text-[11px] font-mono font-bold text-broadcast-secondary uppercase">
+                      <span>{col.title}</span>
+                      <span className="text-[10px] text-hairline">Col {idx + 1}</span>
+                    </div>
+
+                    <div className="flex-1 flex flex-col justify-between space-y-1 overflow-hidden">
+                      {col.items.map((item) => (
+                        <TopChartCard key={`${item.rank}-${item.appleAppId}`} item={item} />
+                      ))}
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
 
-            {/* List of ranked apps */}
-            <div className="mt-3 flex flex-col space-y-2">
-              {snapshot.appStore.status === "UNAVAILABLE" ? (
-                <div className="h-96 flex flex-col items-center justify-center text-center p-8 text-broadcast-secondary font-mono text-sm">
-                  <span>Awaiting first collection · next attempt scheduled</span>
-                  <span className="text-hairline mt-2 text-xs">
-                    Source state: {snapshot.appStore.freshness.state}
-                  </span>
+            <div className="pt-3 border-t border-hairline/60 flex items-center justify-between text-xs font-mono text-broadcast-secondary">
+              <div className="flex items-center space-x-4">
+                <span>{snapshot.appStore.attribution}</span>
+                <span className="text-hairline">|</span>
+                <span className="text-broadcast-secondary">
+                  Downloads: Direct App Store download links provided for all 50 apps · Disclosed metrics verified per truth-in-data rules
+                </span>
+              </div>
+              <span>
+                Source Updated: {formatTime(snapshot.appStore.sourceUpdatedAt)}
+              </span>
+            </div>
+          </section>
+        </main>
+      ) : (
+        /* STANDARD 3-COLUMN VIEW (Metric 1, Metric 2, Metric 3, Metric 4) */
+        <main className="h-[920px] p-6 flex gap-4 shrink-0 overflow-hidden">
+          {/* COLUMN 1: APP STORE POPULARITY (760px) */}
+          <section
+            id="panel-app-store"
+            className="w-[760px] h-full bg-panel border border-hairline rounded-lg p-5 flex flex-col justify-between shrink-0 overflow-hidden"
+          >
+            <div>
+              <div className="flex items-center justify-between pb-3 border-b border-hairline/60">
+                <div>
+                  <div className="flex items-center space-x-3 mb-0.5">
+                    <span className="text-xs font-mono font-bold tracking-widest text-broadcast-secondary uppercase">
+                      Metric 1 · Automatic Public Ingestion
+                    </span>
+                    {/* Mode switcher pills */}
+                    <div className="flex items-center space-x-1 bg-canvas/80 p-0.5 rounded border border-hairline/70">
+                      <button
+                        onClick={() => setViewMode("tracked")}
+                        className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold transition ${
+                          viewMode === "tracked"
+                            ? "bg-broadcast-blue text-white shadow-sm"
+                            : "text-broadcast-secondary hover:text-broadcast-text"
+                        }`}
+                      >
+                        Tracked AI ({snapshot.appStore.items.length})
+                      </button>
+                      <button
+                        onClick={() => setViewMode("top50")}
+                        className="px-2 py-0.5 rounded text-[10px] font-mono font-bold text-broadcast-secondary hover:text-broadcast-text transition"
+                      >
+                        Full-Screen Top 50 ↗
+                      </button>
+                    </div>
+                  </div>
+                  <h2 className="text-xl font-bold tracking-wide text-broadcast-text">
+                    App Store Popularity (Top Free · {snapshot.appStore.country.toUpperCase()})
+                  </h2>
                 </div>
-              ) : viewMode === "top50" ? (
-                <div className="grid grid-cols-2 gap-3 h-[745px] overflow-hidden select-none">
-                  <div className="flex flex-col justify-between h-full space-y-1">
-                    {(snapshot.appStore.topChart || []).slice(0, 25).map((chartItem) => (
-                      <TopChartCompactRow key={`${chartItem.rank}-${chartItem.appleAppId}`} item={chartItem} />
+                <div className="flex items-center space-x-2">
+                  <StatusBadge status={snapshot.appStore.status} />
+                </div>
+              </div>
+
+              {/* List of ranked apps */}
+              <div className="mt-3 flex flex-col space-y-2">
+                {snapshot.appStore.status === "UNAVAILABLE" ? (
+                  <div className="h-96 flex flex-col items-center justify-center text-center p-8 text-broadcast-secondary font-mono text-sm">
+                    <span>Awaiting first collection · next attempt scheduled</span>
+                    <span className="text-hairline mt-2 text-xs">
+                      Source state: {snapshot.appStore.freshness.state}
+                    </span>
+                  </div>
+                ) : snapshot.appStore.items.length === 0 ? (
+                  <div className="h-96 flex flex-col items-center justify-center text-center p-8 text-broadcast-secondary font-mono text-sm">
+                    <span>No tracked applications ranked in current Top 100 chart.</span>
+                  </div>
+                ) : (
+                  snapshot.appStore.items.map((item) => (
+                    <AppStoreRow key={item.appleAppId} item={item} />
+                  ))
+                )}
+              </div>
+
+              {/* Not in Top 100 section */}
+              {snapshot.appStore.notInTop100.length > 0 && (
+                <div className="mt-4 pt-3 border-t border-hairline/60">
+                  <div className="text-[11px] font-mono text-broadcast-secondary mb-1.5 uppercase tracking-wide">
+                    Not in Top 100
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {snapshot.appStore.notInTop100.map((app) => (
+                      <span
+                        key={app.slug}
+                        className="px-2.5 py-1 rounded bg-canvas/60 border border-hairline/60 font-mono text-xs text-broadcast-secondary"
+                      >
+                        {app.displayName}
+                      </span>
                     ))}
                   </div>
-                  <div className="flex flex-col justify-between h-full space-y-1">
-                    {(snapshot.appStore.topChart || []).slice(25, 50).map((chartItem) => (
-                      <TopChartCompactRow key={`${chartItem.rank}-${chartItem.appleAppId}`} item={chartItem} />
-                    ))}
-                  </div>
                 </div>
-              ) : snapshot.appStore.items.length === 0 ? (
-                <div className="h-96 flex flex-col items-center justify-center text-center p-8 text-broadcast-secondary font-mono text-sm">
-                  <span>No tracked applications ranked in current Top 100 chart.</span>
-                </div>
-              ) : (
-                snapshot.appStore.items.map((item) => (
-                  <AppStoreRow key={item.appleAppId} item={item} />
-                ))
               )}
             </div>
 
-            {/* Not in Top 100 section */}
-            {viewMode === "tracked" && snapshot.appStore.notInTop100.length > 0 && (
-              <div className="mt-4 pt-3 border-t border-hairline/60">
-                <div className="text-[11px] font-mono text-broadcast-secondary mb-1.5 uppercase tracking-wide">
-                  Not in Top 100
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {snapshot.appStore.notInTop100.map((app) => (
-                    <span
-                      key={app.slug}
-                      className="px-2.5 py-1 rounded bg-canvas/60 border border-hairline/60 font-mono text-xs text-broadcast-secondary"
-                    >
-                      {app.displayName}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-
-          <div className="pt-3 border-t border-hairline/60 flex items-center justify-between text-[11px] font-mono text-broadcast-secondary">
-            <span>{snapshot.appStore.attribution}</span>
-            <span>
-              Source Updated: {formatTime(snapshot.appStore.sourceUpdatedAt)}
-            </span>
-          </div>
-        </section>
+            <div className="pt-3 border-t border-hairline/60 flex items-center justify-between text-[11px] font-mono text-broadcast-secondary">
+              <span>{snapshot.appStore.attribution}</span>
+              <span>
+                Source Updated: {formatTime(snapshot.appStore.sourceUpdatedAt)}
+              </span>
+            </div>
+          </section>
 
         {/* COLUMN 2: SEARCH INTEREST & 24H RANK MOVEMENT (560px) */}
         <div className="w-[560px] h-full flex flex-col gap-4 shrink-0 overflow-hidden">
@@ -572,6 +664,7 @@ export function BroadcastClient({
           </section>
         </div>
       </main>
+      )}
 
       {/* FOOTER (72px) */}
       <footer className="h-[72px] px-6 border-t border-hairline flex items-center justify-between shrink-0 bg-panel/40">
@@ -735,29 +828,58 @@ function OfficialUserRow({ item }: { item: OfficialUserItem }) {
   );
 }
 
-function TopChartCompactRow({ item }: { item: ChartItem }) {
+function TopChartCard({ item }: { item: ChartItem }) {
   return (
     <div
-      className={`flex items-center justify-between px-2.5 py-1 rounded border text-xs leading-none transition ${
+      className={`flex items-center justify-between px-2.5 py-1.5 rounded-md border text-xs leading-tight transition ${
         item.isTracked
-          ? "bg-broadcast-blue/20 border-broadcast-blue/70 text-broadcast-text shadow-sm"
-          : "bg-panel/60 border-hairline/40 text-broadcast-secondary hover:text-broadcast-text"
+          ? "bg-broadcast-blue/20 border-broadcast-blue/80 shadow-[0_0_10px_rgba(45,123,255,0.25)] ring-1 ring-broadcast-blue/40"
+          : "bg-panel/90 border-hairline/40 hover:border-hairline"
       }`}
     >
-      <div className="flex items-center space-x-2 truncate">
-        <span className="font-mono font-bold text-broadcast-text w-6 text-right shrink-0">
+      <div className="flex items-center space-x-2 truncate min-w-0 flex-1 mr-2">
+        <span className="w-6 font-mono font-black text-sm text-broadcast-text text-right shrink-0 tabular-nums">
           #{item.rank}
         </span>
-        <Monogram name={item.name} size={20} />
-        <span className="font-semibold truncate max-w-[190px] text-broadcast-text">
-          {item.name}
-        </span>
+        <Monogram name={item.name} size={26} />
+        <div className="flex flex-col truncate min-w-0">
+          <span className="font-bold text-xs text-broadcast-text truncate" title={item.name}>
+            {item.name}
+          </span>
+          <span className="text-[10px] text-broadcast-secondary truncate" title={item.artist || ""}>
+            {item.artist || "Unknown Developer"}
+          </span>
+        </div>
       </div>
-      {item.isTracked && (
-        <span className="px-1.5 py-0.5 rounded bg-broadcast-blue/40 text-broadcast-cyan font-mono text-[9px] font-bold uppercase shrink-0">
-          AI APP
-        </span>
-      )}
+
+      <div className="flex items-center space-x-2 shrink-0">
+        {item.isTracked && (
+          <span className="px-1.5 py-0.5 rounded bg-broadcast-blue/40 border border-broadcast-blue/70 text-broadcast-cyan font-mono text-[9px] font-black uppercase tracking-wider">
+            AI APP
+          </span>
+        )}
+        <div className="flex flex-col items-end">
+          <a
+            href={item.downloadUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            title={`Download ${item.name} on Apple App Store`}
+            className="flex items-center space-x-1 px-2 py-0.5 rounded bg-broadcast-blue hover:bg-blue-600 text-white font-mono text-[10px] font-bold shadow-sm transition"
+          >
+            <span>⬇ Get</span>
+            <span className="text-[8px] opacity-75">↗</span>
+          </a>
+          {item.verifiedDownloads ? (
+            <span className="text-[9px] font-mono font-bold text-broadcast-green leading-none mt-0.5">
+              {item.verifiedDownloads}
+            </span>
+          ) : (
+            <span className="text-[9px] font-mono text-broadcast-secondary/70 leading-none mt-0.5">
+              Free DL
+            </span>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

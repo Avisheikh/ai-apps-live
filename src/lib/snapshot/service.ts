@@ -24,6 +24,8 @@ export interface ChartItem {
   appleAppId: string;
   name: string;
   artist: string | null;
+  downloadUrl: string;
+  verifiedDownloads: string | null;
   isTracked: boolean;
   trackedAppSlug?: string | null;
 }
@@ -349,11 +351,14 @@ export class SnapshotService {
 
       for (const r of rankings.slice(0, 50)) {
         const tracked = (r.app_id ? activeApps.find((a) => a.id === r.app_id) : null) || trackedAppleIds.get(r.apple_app_id);
+        const downloadUrl = `https://apps.apple.com/${country.toLowerCase()}/app/id${r.apple_app_id}`;
         topChart.push({
           rank: r.rank,
           appleAppId: r.apple_app_id,
           name: r.name_in_feed,
           artist: r.artist_in_feed,
+          downloadUrl,
+          verifiedDownloads: null,
           isTracked: !!tracked,
           trackedAppSlug: tracked?.slug || null,
         });
@@ -557,6 +562,13 @@ export class SnapshotService {
 
     for (const d of verifiedDisclosures) {
       reportedAppIds.add(d.app_id);
+
+      // Link verified metrics to topChart if charting
+      const chartMatch = topChart.find((t) => t.trackedAppSlug === d.app_slug);
+      if (chartMatch && !chartMatch.verifiedDownloads) {
+        const formatted = formatUserCount(d.value_numeric, d.value_qualifier);
+        chartMatch.verifiedDownloads = `${formatted} ${d.metric_label}`;
+      }
 
       const itemStatus = deriveDisplayStatus({
         metric: "OFFICIAL_USERS",

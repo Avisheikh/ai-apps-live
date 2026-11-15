@@ -26,14 +26,14 @@ export default async function Top50Page() {
         <div className="flex items-center space-x-4">
           <div className="flex flex-col">
             <span className="font-mono text-xl font-black tracking-wider text-broadcast-text">
-              APP STORE TOP 50 FREE
+              APP STORE TOP 50 FREE & DOWNLOADS
             </span>
             <span className="text-[10px] font-mono tracking-widest text-broadcast-secondary uppercase">
-              US Storefront · Ingested via Apple RSS Feed · Live Observability
+              US Storefront · Ingested via Apple RSS Feed · Live Single-Screen View
             </span>
           </div>
           <span className="px-2.5 py-0.5 rounded bg-broadcast-blue/20 border border-broadcast-blue/40 text-broadcast-blue font-mono text-xs font-bold">
-            SOURCE DATA
+            50/50 APPS DISPLAYED
           </span>
         </div>
 
@@ -47,10 +47,16 @@ export default async function Top50Page() {
 
           <div className="flex items-center space-x-2">
             <Link
-              href="/broadcast"
-              className="px-3 py-1.5 rounded bg-broadcast-blue text-white font-mono text-xs font-bold hover:bg-opacity-90 transition"
+              href="/broadcast?view=top50"
+              className="px-3 py-1.5 rounded bg-broadcast-blue text-white font-mono text-xs font-bold hover:bg-opacity-90 transition shadow-sm"
             >
-              Broadcast View (1080p)
+              OBS Broadcast View (1080p)
+            </Link>
+            <Link
+              href="/broadcast"
+              className="px-3 py-1.5 rounded border border-hairline bg-panel text-broadcast-secondary hover:text-broadcast-text font-mono text-xs transition"
+            >
+              3-Column View
             </Link>
             <Link
               href="/admin"
@@ -82,30 +88,53 @@ export default async function Top50Page() {
                   key={`${app.rank}-${app.appleAppId}`}
                   className={`flex items-center justify-between px-2.5 py-1.5 rounded border text-xs leading-tight transition ${
                     app.isTracked
-                      ? "bg-broadcast-blue/20 border-broadcast-blue/70 shadow-[0_0_8px_rgba(45,123,255,0.2)]"
+                      ? "bg-broadcast-blue/20 border-broadcast-blue/80 shadow-[0_0_10px_rgba(45,123,255,0.25)] ring-1 ring-broadcast-blue/40"
                       : "bg-panel/80 border-hairline/40 hover:border-hairline"
                   }`}
                 >
-                  <div className="flex items-center space-x-2.5 truncate">
+                  <div className="flex items-center space-x-2.5 truncate min-w-0 flex-1 mr-2">
                     <span className="w-6 font-mono font-black text-sm text-broadcast-text text-right shrink-0 tabular-nums">
                       #{app.rank}
                     </span>
                     <Monogram name={app.name} size={24} />
-                    <div className="flex flex-col truncate max-w-[170px]">
-                      <span className="font-bold text-xs text-broadcast-text truncate">
+                    <div className="flex flex-col truncate min-w-0">
+                      <span className="font-bold text-xs text-broadcast-text truncate" title={app.name}>
                         {app.name}
                       </span>
-                      <span className="text-[10px] text-broadcast-secondary truncate">
+                      <span className="text-[10px] text-broadcast-secondary truncate" title={app.artist || ""}>
                         {app.artist || "Unknown Developer"}
                       </span>
                     </div>
                   </div>
 
-                  {app.isTracked && (
-                    <span className="px-1.5 py-0.5 rounded bg-broadcast-blue/40 border border-broadcast-blue/70 text-broadcast-cyan font-mono text-[9px] font-black uppercase tracking-wider shrink-0">
-                      AI APP
-                    </span>
-                  )}
+                  <div className="flex items-center space-x-2 shrink-0">
+                    {app.isTracked && (
+                      <span className="px-1.5 py-0.5 rounded bg-broadcast-blue/40 border border-broadcast-blue/70 text-broadcast-cyan font-mono text-[9px] font-black uppercase tracking-wider">
+                        AI APP
+                      </span>
+                    )}
+                    <div className="flex flex-col items-end">
+                      <a
+                        href={app.downloadUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        title={`Download ${app.name} on Apple App Store`}
+                        className="flex items-center space-x-1 px-2 py-0.5 rounded bg-broadcast-blue hover:bg-blue-600 text-white font-mono text-[10px] font-bold shadow-sm transition"
+                      >
+                        <span>⬇ Get</span>
+                        <span className="text-[8px] opacity-75">↗</span>
+                      </a>
+                      {app.verifiedDownloads ? (
+                        <span className="text-[9px] font-mono font-bold text-broadcast-green leading-none mt-0.5">
+                          {app.verifiedDownloads}
+                        </span>
+                      ) : (
+                        <span className="text-[9px] font-mono text-broadcast-secondary/70 leading-none mt-0.5">
+                          Free DL
+                        </span>
+                      )}
+                    </div>
+                  </div>
                 </div>
               ))}
             </div>
@@ -119,8 +148,8 @@ export default async function Top50Page() {
           Source: Apple App Store charts (<a href="https://rss.marketingtools.apple.com" target="_blank" rel="noreferrer" className="underline hover:text-broadcast-text">rss.marketingtools.apple.com</a>)
         </div>
         <div className="flex items-center space-x-2">
-          <span className="w-2 h-2 rounded-full bg-broadcast-blue inline-block" />
-          <span>Highlighted rows represent Tracked AI Apps monitored by AI Apps Live</span>
+          <span className="w-2 h-2 rounded-full bg-broadcast-blue inline-block shadow-[0_0_6px_#2D7BFF]" />
+          <span>Highlighted rows represent Tracked AI Apps · Direct download links provided for all 50 apps</span>
         </div>
         <div>
           Independent project. Not affiliated with any listed company.

@@ -10,6 +10,7 @@ interface BroadcastPageProps {
     tz?: string;
     preview?: string;
     view?: string;
+    layout?: string;
   }>;
 }
 
@@ -18,7 +19,10 @@ export default async function BroadcastPage({ searchParams }: BroadcastPageProps
   const country = typeof params.country === "string" ? params.country.toLowerCase() : "us";
   const tz = typeof params.tz === "string" ? params.tz : "UTC";
   const preview = params.preview === "1" || params.preview === "true";
-  const defaultView = params.view === "top50" ? "top50" : "tracked";
+  const defaultView =
+    params.view === "top50" || params.layout === "fullscreen" || params.layout === "top50"
+      ? "top50"
+      : "tracked";
   const demoMode = process.env.DEMO_MODE === "1";
 
   // Server-render the first snapshot directly from SQLite
