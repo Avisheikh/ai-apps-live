@@ -237,3 +237,66 @@ Collector result: {
 
 ### 4. Known Gaps
 - Phase 4 Trends CSV importer to be implemented.
+
+
+## Phase 4 Report: Google Trends CSV Importer
+
+**Date:** 2026-11-15T14:12:00Z  
+**Phase Status:** COMPLETED
+
+### 1. What Changed
+- Implemented `src/importers/google-trends/index.ts`:
+  - Enforced 2 MB file size limit and UTF-8 / BOM stripping.
+  - Implemented duplicate detection using SHA-256 hash.
+  - Validated "Interest over time" export format; explicitly rejected regional ("Subregion,") and related queries/topics exports.
+  - Validated comparison terms: maximum 5 terms, strict 1:1 matching against active apps' `trends_label`, geography label consistency.
+  - Validated time series: ascending date order, matching declared granularity.
+  - Validated values: 0–100 integer range or `<1` literal (stored as `value_raw = '<1'`, `value_index = NULL`). Prohibited empty or non-numeric cells (no zero extrapolation).
+  - Detected partial buckets where time extends beyond export date.
+  - Created atomic commit transaction that deactivates previous current imports with the same geography and search type, inserts `search_interest_imports` and `search_interest` rows, logs to `audit_log`, and emits `disclosure_update` stream event.
+  - Implemented auditable `REJECTED` row persistence storing the raw file and specific rejection reason whenever validation fails.
+- Created test fixtures under `tests/fixtures/trends/`:
+  - `valid_trends.csv`
+  - `invalid_region.csv`
+  - `invalid_unknown_term.csv`
+  - `invalid_empty_cell.csv`
+  - `invalid_out_of_bounds.csv`
+  - `invalid_non_ascending_date.csv`
+  - `invalid_too_many_terms.csv`
+- Authored test suite `tests/unit/trends_importer.test.ts` verifying all Phase 4 acceptance criteria.
+
+### 2. Commands Actually Run & Final Output Lines
+
+#### Command: `npm test`
+```
+> ai-apps-live@1.0.0 test
+> vitest run
+
+ ✓ tests/unit/database.test.ts (10 tests) 97ms
+ ✓ tests/unit/scaffold.test.ts (1 test) 249ms
+ ✓ tests/unit/trends_importer.test.ts (9 tests) 58ms
+ ✓ tests/integration/apple_collector.test.ts (7 tests) 274ms
+
+ Test Files  4 passed (4)
+      Tests  27 passed (27)
+   Start at  14:11:34
+   Duration  965ms (tests 43%, transform 32%, import 22%, worker 3%)
+```
+(Exited with code 0)
+
+#### Command: `npm run typecheck && npm run lint`
+```
+> ai-apps-live@1.0.0 typecheck
+> tsc --noEmit
+
+> ai-apps-live@1.0.0 lint
+> eslint .
+```
+(Exited with code 0)
+
+### 3. Test Counts
+- Unit & Integration tests: 27 passed, 0 failed.
+- Trends importer tests: 9 passed.
+
+### 4. Known Gaps
+- Phase 5 Disclosure management to be implemented.
