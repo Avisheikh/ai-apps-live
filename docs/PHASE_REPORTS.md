@@ -73,3 +73,80 @@ Route (app)
 ### 4. Known Gaps
 - Database migrations, tables, triggers, and seed data will be implemented in Phase 2.
 - Real Apple RSS collector implementation scheduled for Phase 3.
+
+
+## Phase 2 Report: Database Schema, Migrations, Registry, and Integrity
+
+**Date:** 2026-11-15T13:57:30Z  
+**Phase Status:** COMPLETED
+
+### 1. What Changed
+- Created `db/migrations/0001_init.sql` matching the exact SQLite v1 schema with WAL mode, foreign keys, constraints, and database triggers:
+  - `trg_block_concurrent_enable_upd` and `trg_block_concurrent_enable_ins` locking `CONCURRENT_USERS` metric permanently off.
+  - `trg_rank_no_update`, `trg_rank_no_delete`, and `trg_snapshot_no_delete` enforcing append-only protection on App Store rankings and snapshots.
+  - `trg_si_no_update` enforcing append-only protection on search interest data.
+  - `trg_disc_no_value_edit_after_verify` enforcing that verified disclosures cannot be edited in place.
+- Created `db/migrations/0002_seed.sql` seeding:
+  - 10 tracked apps (ChatGPT, Claude, Google Gemini, DeepSeek, Perplexity, Grok, Microsoft Copilot, Character.AI, Poe, Meta AI). Apple IDs set only for ChatGPT, Claude, and Gemini with status `UNCONFIRMED`; all others NULL.
+  - 5 data sources (`apple_rss`, `google_trends_csv`, `company_disclosure`, `statuspage`, `cloudflare_radar`).
+  - Source health records initialized in `UNKNOWN` or `DISABLED`.
+  - Metric controls enabled for core metrics and disabled for concurrent users and optional modules.
+  - Zero metric values seeded.
+- Implemented `src/lib/db/index.ts` connection manager supporting `DATABASE_PATH`, `DEMO_MODE`, and in-memory databases.
+- Implemented `src/lib/db/migrate.ts` migration runner recording applied migrations in `schema_migrations`.
+- Implemented `src/lib/db/seed.ts` runner.
+- Implemented `src/lib/db/integrity.ts` scanning for `example.test` fixture leaks and throwing on production integrity violations.
+- Implemented `src/lib/db/repo.ts` typed repository layer for apps, data sources, metric controls, source health, stream events, audit logs, and settings.
+- Authored test suite `tests/unit/database.test.ts` covering migrations, schema triggers, seed purity, and integrity verification.
+
+### 2. Commands Actually Run & Final Output Lines
+
+#### Command: `npm run db:migrate && npm run db:seed`
+```
+> ai-apps-live@1.0.0 db:migrate
+> tsx src/lib/db/migrate.ts
+
+[DB Migration] Applied: 0001_init.sql
+[DB Migration] Applied: 0002_seed.sql
+[DB Migration] Complete. Applied: 2, Skipped: 0
+
+> ai-apps-live@1.0.0 db:seed
+> tsx src/lib/db/seed.ts
+
+[DB Seed] Verified 10 apps and 5 data sources registered.
+[DB Seed] Completed successfully.
+```
+(Exited with code 0)
+
+#### Command: `npm test`
+```
+> ai-apps-live@1.0.0 test
+> vitest run
+
+ ✓ tests/unit/database.test.ts (10 tests) 48ms
+ ✓ tests/unit/scaffold.test.ts (1 test) 188ms
+
+ Test Files  2 passed (2)
+      Tests  11 passed (11)
+   Start at  13:56:55
+   Duration  525ms (tests 56%, transform 29%, import 10%, worker 5%)
+```
+(Exited with code 0)
+
+#### Command: `npm run typecheck && npm run lint`
+```
+> ai-apps-live@1.0.0 typecheck
+> tsc --noEmit
+
+> ai-apps-live@1.0.0 lint
+> eslint .
+```
+(Exited with code 0)
+
+### 3. Test Counts
+- Unit tests: 11 passed, 0 failed.
+- Schema trigger tests: 5 passed.
+- Integrity check tests: 2 passed.
+
+### 4. Known Gaps
+- Apple RSS collector to be implemented in Phase 3.
