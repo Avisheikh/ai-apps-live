@@ -57,7 +57,7 @@ describe("Phase 10: Chaos & Failure Resilience Suite", () => {
     });
 
     await new Promise<void>((resolve) => mockServer!.listen(0, "127.0.0.1", () => resolve()));
-    mockPort = (mockServer.address() as any).port;
+    mockPort = (mockServer.address() as { port: number }).port;
 
     const collector = new AppleRssCollector(`http://127.0.0.1:${mockPort}`, 5);
     const scheduler = new Scheduler(db);
@@ -84,7 +84,7 @@ describe("Phase 10: Chaos & Failure Resilience Suite", () => {
     });
 
     await new Promise<void>((resolve) => mockServer!.listen(0, "127.0.0.1", () => resolve()));
-    mockPort = (mockServer.address() as any).port;
+    mockPort = (mockServer.address() as { port: number }).port;
 
     const collector = new AppleRssCollector(`http://127.0.0.1:${mockPort}`, 5);
     const scheduler = new Scheduler(db);
