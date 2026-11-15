@@ -190,5 +190,18 @@ test.describe("Broadcast Dashboard (/broadcast) Acceptance Criteria", () => {
     await page.click("#view-toggle-top50");
     await expect(page.locator("#panel-search-interest")).toHaveCount(0);
     await expect(page.locator("#panel-top50-fullscreen")).toBeVisible();
+
+    // 6. Verify real-time download numbers dynamically increment on screen
+    const totalTodaySelector = "#panel-top50-fullscreen strong.tabular-nums";
+    const initialTotalStr = await page.locator(totalTodaySelector).innerText();
+    const initialTotal = parseInt(initialTotalStr.replace(/,/g, ""), 10);
+    expect(initialTotal).toBeGreaterThan(0);
+
+    // Wait 1.5s for real-time velocity ticker to increment
+    await page.waitForTimeout(1500);
+
+    const updatedTotalStr = await page.locator(totalTodaySelector).innerText();
+    const updatedTotal = parseInt(updatedTotalStr.replace(/,/g, ""), 10);
+    expect(updatedTotal).toBeGreaterThan(initialTotal);
   });
 });
